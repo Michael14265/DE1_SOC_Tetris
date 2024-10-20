@@ -12,16 +12,19 @@
 #include "tetris_logic.h"
 #include "vga_display.h"
 
+// Helper function to enable reading of arrow keys in real time
 void enableRawMode(struct termios *orig_term) {
     struct termios raw = *orig_term;
     raw.c_lflag &= ~(ICANON | ECHO); // Disable canonical mode and echo
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
 }
 
+// Helper function to disable reading of arrow keys in real time
 void disableRawMode(struct termios *orig_term) {
     tcsetattr(STDIN_FILENO, TCSAFLUSH, orig_term); // Reset terminal
 }
 
+// Reads user input for a specified time window before progressing the game
 void readUserKeys(struct termios *orig_term, int *gameBoard, TetrisPiece *currentPiece, double timeWindow) {
 
 	enableRawMode(orig_term);           // Enable raw mode
@@ -73,10 +76,10 @@ void gameOverScreen(char *scoreStr) {
 	VGA_text(36, 32, finalScoreStr);
 }
 
-int gameOver(int *currentPiece) {
+int gameOver(TetrisPiece *currentPiece) {
 	int i;
 	for(i = 0; i < 4;i++) {
-		if(currentPiece[i] < 10)
+		if(currentPiece->blocks[i] < 10)
 			return 1;
 	}
 	return 0;
@@ -111,75 +114,85 @@ void removeRow(int *gameBoard, int rowNum) {
 		gameBoard[i] = 0;
 }	
 
-void turnPiece(int *currentPiece) {
+// Turns current piece clockwise by 90 degrees
+void turnPiece(TetrisPiece *currentPiece) {
+	
 	int width, i, j;
-	if(currentPiece[4] == 1)
+
+	// Sets width variable based on type of piece
+	if(currentPiece->type == 1)
 		width = 4;
-	else if(currentPiece[4] == 5)
+	else if(currentPiece->type == 5)
 		width = 2;
 	else
 		width = 3;
 
+	// Initializes 1D array representing 2D square containing the current piece
 	int shapeSquare[width*width];
 
+	// Initializes all indices that contain a block of the current piece to 1, and the rest to 0
 	for(i = 0; i < width;i++) {
 		for(j = 0; j < width; j++) {
-			if(((currentPiece[5] + 10*i + j) == currentPiece[0]) || ((currentPiece[5] + 10*i + j) == currentPiece[1]) || ((currentPiece[5] + 10*i + j) == currentPiece[2]) || ((currentPiece[5] + 10*i + j) == currentPiece[3])) 
+			if(((currentPiece->position + 10*i + j) == currentPiece->blocks[0]) || ((currentPiece->position + 10*i + j) == currentPiece->blocks[1]) || ((currentPiece->position + 10*i + j) == currentPiece->blocks[2]) || ((currentPiece->position + 10*i + j) == currentPiece->blocks[3])) 
  				shapeSquare[width*i + j] = 1;
 			else
 				shapeSquare[width*i + j] = 0;
 		}
 	}
 
+	// Rotate array clockwise by 90 degrees, and place the result in newShapeSquare
 	int newShapeSquare[width*width];
 	for(i = 0;i < width;i++) {
 		for(j = 0;j < width;j++) {
 			newShapeSquare[width*i + j] = shapeSquare[width*(width-1) - width*j + i];
 		}
 	}
+	// Replaces the currentPiece block indices with those of the rotated piece
 	int currentPieceIndex = 0;
 	for(i = 0;i < width;i++) {
 		for(j = 0;j < width;j++) {
 			if(newShapeSquare[width*i + j] == 1) {
-				currentPiece[currentPieceIndex] = 10*i + j + currentPiece[5];
+				currentPiece->blocks[currentPieceIndex] = 10*i + j + currentPiece->position;
 				currentPieceIndex++;
 			}	
 		}
 	}
 }
 
-int notCurrentPiece(int *currentPiece, int currentPieceIndex, int moveSpaces) {
+// Small helper function that checks if the next position of the current block 
+// is occupied by another one of its own pieces
+// Used to simplify logic in moveNotValid
+int notCurrentPiece(TetrisPiece *currentPiece, int currentPieceIndex, int moveSpaces) {
 	
 	int i;	
 	for(i = 0; i < 4; i++) {
-		if(currentPieceIndex + moveSpaces == currentPiece[i])
+		if(currentPieceIndex + moveSpaces == currentPiece->blocks[i])
 			return 0;
 	}
 	return 1;
 }
 
-int moveNotValid(int *gameBoard, int *currentPiece, int moveSpaces) {
+// Checks if a move is valid
+int moveNotValid(int *gameBoard, TetrisPiece *currentPiece, int moveSpaces) {
 	
 	int i;
 
+	// Checks that the move doesn't go off the game board, or overlap with an existing piece
 	for(i = 0; i < 4;i++) {
-
-		if((currentPiece[i] + moveSpaces) > 200 ||  ((currentPiece[i] % 10 == 0) && ((currentPiece[i] + moveSpaces) % 10 == 9)) || ((currentPiece[i] % 10 == 9) && ((currentPiece[i] + moveSpaces) % 10 == 0)) ||(gameBoard[currentPiece[i] + moveSpaces] != 0 && (notCurrentPiece(currentPiece, currentPiece[i], moveSpaces) == 1))) {
+		if((currentPiece->blocks[i] + moveSpaces) > 200 ||  ((currentPiece->blocks[i] % 10 == 0) && ((currentPiece->blocks[i] + moveSpaces) % 10 == 9)) || ((currentPiece->blocks[i] % 10 == 9) && ((currentPiece->blocks[i] + moveSpaces) % 10 == 0)) ||(gameBoard[currentPiece->blocks[i] + moveSpaces] != 0 && (notCurrentPiece(currentPiece, currentPiece->blocks[i], moveSpaces) == 1))) {
 			return 1;
 		}
 	}
 	return 0;
 }
 
-// Tetris Game Logic Functions
-
-void movePiece(int *gameBoard, int *currentPiece, char key) {
+void movePiece(int *gameBoard, TetrisPiece *currentPiece, char key) {
 	
 	int i;
 
     if(key == 'A') {
 		for(i = 0; i < 4;i++) {	
-			gameBoard[currentPiece[i]] = 0;
+			gameBoard[currentPiece->blocks[i]] = 0;
 		}
 		turnPiece(currentPiece);
 
@@ -190,11 +203,11 @@ void movePiece(int *gameBoard, int *currentPiece, char key) {
 		}
 		for(i = 0; i < 4;i++) {
 			
-			gameBoard[currentPiece[i]] = 0;
-			currentPiece[i] = currentPiece[i] + 10;
+			gameBoard[currentPiece->blocks[i]] = 0;
+			currentPiece->blocks[i] = currentPiece->blocks[i] + 10;
 
 		}
-		currentPiece[5] += 10;
+		currentPiece->position += 10;
 	}
     else if(key == 'C') {
 		if(moveNotValid(gameBoard,currentPiece,1)) {
@@ -202,11 +215,11 @@ void movePiece(int *gameBoard, int *currentPiece, char key) {
 		}
 
 		for(i = 0; i < 4;i++) {	
-			gameBoard[currentPiece[i]] = 0;
-			currentPiece[i] = currentPiece[i] + 1;
+			gameBoard[currentPiece->blocks[i]] = 0;
+			currentPiece->blocks[i] = currentPiece->blocks[i] + 1;
 
 		}
-		currentPiece[5] += 1;
+		currentPiece->position += 1;
 	}
    	else if(key == 'D') {
 		if(moveNotValid(gameBoard,currentPiece,-1)) {
@@ -214,23 +227,23 @@ void movePiece(int *gameBoard, int *currentPiece, char key) {
 		}
 
 		for(i = 0; i < 4;i++) {	
-			gameBoard[currentPiece[i]] = 0;
-			currentPiece[i] = currentPiece[i] - 1;
+			gameBoard[currentPiece->blocks[i]] = 0;
+			currentPiece->blocks[i] = currentPiece->blocks[i] - 1;
 		}
-		currentPiece[5] -= 1;
+		currentPiece->position -= 1;
 	}
    
 
 	for(i = 0; i < 4;i++) {
 					
-		gameBoard[currentPiece[i]] = currentPiece[4];
+		gameBoard[currentPiece->blocks[i]] = currentPiece->type;
 	
 	}
 
 	drawGameBoard(gameBoard);
 
 }
-int updateGameBoard(int *gameBoard, int *currentPiece) {
+int updateGameBoard(int *gameBoard, TetrisPiece *currentPiece) {
 	
 	int i;
 
@@ -240,15 +253,15 @@ int updateGameBoard(int *gameBoard, int *currentPiece) {
 
 	for(i = 0; i < 4;i++) {
 			
-		gameBoard[currentPiece[i]] = 0;
-		currentPiece[i] = currentPiece[i] + 10;
+		gameBoard[currentPiece->blocks[i]] = 0;
+		currentPiece->blocks[i] = currentPiece->blocks[i] + 10;
 	}
 	
-	currentPiece[5] += 10;
+	currentPiece->position += 10;
 
 	for(i = 0; i < 4;i++) {
 					
-		gameBoard[currentPiece[i]] = currentPiece[4];
+		gameBoard[currentPiece->blocks[i]] = currentPiece->type;
 	
 	}
 	return 0;
@@ -268,47 +281,47 @@ void generatePiece(int *gameBoard, TetrisPiece *currentPiece) {
 		currentPiece->blocks[3] = 3;
 		currentPiece->type = 1;
 	} else if(randomNum == 1) {
-		currentPiece[0] = 1;
-		currentPiece[1] = 10;
-		currentPiece[2] = 11;
-		currentPiece[3] = 12;
-		currentPiece[4] = 2;
+		currentPiece->blocks[0] = 1;
+		currentPiece->blocks[1] = 10;
+		currentPiece->blocks[2] = 11;
+		currentPiece->blocks[3] = 12;
+		currentPiece->type = 2;
 	} else if(randomNum == 2) {
-		currentPiece[0] = 0;
-		currentPiece[1] = 10;
-		currentPiece[2] = 11;
-		currentPiece[3] = 12;
-		currentPiece[4] = 3;
+		currentPiece->blocks[0] = 0;
+		currentPiece->blocks[1] = 10;
+		currentPiece->blocks[2] = 11;
+		currentPiece->blocks[3] = 12;
+		currentPiece->type = 3;
 	} else if(randomNum == 3) {
-		currentPiece[0] = 1;
-		currentPiece[1] = 2;
-		currentPiece[2] = 10;
-		currentPiece[3] = 11;
-		currentPiece[4] = 4;
+		currentPiece->blocks[0] = 1;
+		currentPiece->blocks[1] = 2;
+		currentPiece->blocks[2] = 10;
+		currentPiece->blocks[3] = 11;
+		currentPiece->type = 4;
 	} else if(randomNum == 4) {
-		currentPiece[0] = 0;
-		currentPiece[1] = 1;
-		currentPiece[2] = 10;
-		currentPiece[3] = 11;
-		currentPiece[4] = 5;
+		currentPiece->blocks[0] = 0;
+		currentPiece->blocks[1] = 1;
+		currentPiece->blocks[2] = 10;
+		currentPiece->blocks[3] = 11;
+		currentPiece->type = 5;
 	} else if(randomNum == 5) {
-		currentPiece[0] = 2;
-		currentPiece[1] = 10;
-		currentPiece[2] = 11;
-		currentPiece[3] = 12;
-		currentPiece[4] = 6;
+		currentPiece->blocks[0] = 2;
+		currentPiece->blocks[1] = 10;
+		currentPiece->blocks[2] = 11;
+		currentPiece->blocks[3] = 12;
+		currentPiece->type = 6;
 	} else if(randomNum == 6) {
-		currentPiece[0] = 0;
-		currentPiece[1] = 1;
-		currentPiece[2] = 11;
-		currentPiece[3] = 12;
-		currentPiece[4] = 7;
+		currentPiece->blocks[0] = 0;
+		currentPiece->blocks[1] = 1;
+		currentPiece->blocks[2] = 11;
+		currentPiece->blocks[3] = 12;
+		currentPiece->type = 7;
 	} 
 	
-	currentPiece[5] = 0;
+	currentPiece->position = 0;
 
 	for(i = 0; i < 4; i++) {
-		gameBoard[currentPiece[i]] = currentPiece[4];
+		gameBoard[currentPiece->blocks[i]] = currentPiece->type;
 	}
 
 }

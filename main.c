@@ -127,7 +127,6 @@ int main(void)
 	// Variables to track current game speed and points before gameSpeed is updated
 	double gameSpeed = 1.0;
 	int nextLevel = 700;
-
 	
 	// clear the screen write current score
 	VGA_box (0, 0, 639, 479, black);
