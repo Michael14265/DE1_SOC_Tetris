@@ -119,7 +119,7 @@ int main(void)
 	int gameBoard[200] = {0};
 
 	// Initialize currentPiece object to track current game piece
-	struct TetrisPiece *currentPiece;
+	TetrisPiece currentPiece;
 
 	// Flag to keep track of whether a new piece is needed
 	int newPieceNeeded = 0;
@@ -142,18 +142,18 @@ int main(void)
 	srand(time(0));
 
 	// Start Game
-	generatePiece(gameBoard, currentPiece);
+	generatePiece(gameBoard, &currentPiece);
 	drawGameBoard(gameBoard);
-	
+
 	// Main Game Loop, breaks when game ends
 	while(1) {
 		// Handle user input and game piece movement
-		readUserKeys(&orig_term, gameBoard, currentPiece, gameSpeed);
-		newPieceNeeded = updateGameBoard(gameBoard, currentPiece);
+		readUserKeys(&orig_term, gameBoard, &currentPiece, gameSpeed);
+		newPieceNeeded = updateGameBoard(gameBoard, &currentPiece);
 
 		// Check if a new piece is needed and update score
 		if(newPieceNeeded == 1) {
-			if(gameOver(currentPiece))
+			if(gameOver(&currentPiece))
 				break;
 			updateScore(gameBoard, scoreStr, score);
 
@@ -163,7 +163,7 @@ int main(void)
 				nextLevel += 700;
 			}		
 			// Generate new piece		 
-			generatePiece(gameBoard, currentPiece);		
+			generatePiece(gameBoard, &currentPiece);		
 		}
 		// Draw updated game board
 		drawGameBoard(gameBoard);

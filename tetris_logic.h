@@ -38,10 +38,10 @@ void readUserKeys(struct termios *orig_term, int *gameBoard, TetrisPiece *piece,
 
 // Tetris Logic Function Definitions
 int gameOver(TetrisPiece *);
-int notCurrentPiece(int *, int, int);
-int moveNotValid(int *, int *, int);
-void turnPiece(int *);
-void movePiece(int *, int *, char);
+int notCurrentPiece(TetrisPiece *, int, int);
+int moveNotValid(int *, TetrisPiece *, int);
+void turnPiece(TetrisPiece *);
+void movePiece(int *, TetrisPiece *, char);
 void generatePiece(int *, TetrisPiece *);
 void drawGameBoard(int *);
 int updateGameBoard(int *, TetrisPiece *);

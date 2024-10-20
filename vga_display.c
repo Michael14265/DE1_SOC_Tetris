@@ -194,7 +194,7 @@ void VGA_Vline(int x1, int y1, int y2, short pixel_color)
  * Draw a filled circle on the VGA monitor 
 ****************************************************************************************/
 
-void VGA_disc(int x, int y, int r, short pixel_color)
+/*void VGA_disc(int x, int y, int r, short pixel_color)
 {
 	char  *pixel_ptr ; 
 	int row, col, rsqr, xc, yc;
@@ -221,13 +221,13 @@ void VGA_disc(int x, int y, int r, short pixel_color)
 			}
 					
 		}
-}
+}*/
 
 /****************************************************************************************
  * Draw a  circle on the VGA monitor 
 ****************************************************************************************/
 
-void VGA_circle(int x, int y, int r, short pixel_color)
+/*void VGA_circle(int x, int y, int r, short pixel_color)
 {
 	char  *pixel_ptr ; 
 	int row, col, rsqr, xc, yc;
@@ -284,7 +284,7 @@ void VGA_circle(int x, int y, int r, short pixel_color)
 		// set pixel color
 		*(char *)pixel_ptr = pixel_color;
 	}
-}
+}*/
 
 // =============================================
 // === Draw a line
